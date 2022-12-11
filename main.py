@@ -108,9 +108,9 @@ def photo(message):
 def attach_to_gmail(title, text, need_photo, message):
     msg = MIMEMultipart()
 
-    password = "xtfloruhpcctmzxk"
-    msg['From'] = "mamin.papa0@gmail.com"
-    msg['To'] = "alinabadak@gmail.com"
+    password = "xjawajhqgjkbejmk"
+    msg['From'] = "alinabadak@gmail.com"
+    msg['To'] = "777777777777t@mail.ru"
     msg['Subject'] = title
     if need_photo:
         part = MIMEApplication(open('image.jpg', 'rb').read())

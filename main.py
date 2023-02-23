@@ -1,10 +1,11 @@
 from email.mime.text import MIMEText
+from typing import Type
+
 import telebot
 from telebot import types
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-
 
 TOKEN = "5941022226:AAHWQRMfKB21R__JoxFxhIe910WXCR9_RH4"
 bot = telebot.TeleBot(TOKEN)
@@ -12,7 +13,7 @@ evidence_or_problem_or_reference = -1  # показания - 0, проблем�
 
 
 @bot.message_handler(commands=['start'])
-def start(message):
+def start(message=Type[str]) -> None:
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("Вызов мастера")
     btn2 = types.KeyboardButton("Сообщить о проблеме")
@@ -26,7 +27,7 @@ def start(message):
 
 
 @bot.message_handler(content_types=['text'])
-def func(message):
+def func(message=Type[str]) -> None:
     global evidence_or_problem_or_reference
     if message.text == "Сообщить о проблеме":
         bot.send_message(message.chat.id, text=f"Опишите проблему.")
@@ -85,7 +86,7 @@ def func(message):
 
 
 @bot.message_handler(content_types=['photo'])
-def photo(message):
+def photo(message=Type[str]) -> None:
     text = message.caption
     if evidence_or_problem_or_reference == 0:
         title = 'ПОКАЗАНИЯ СЧЕТЧИКОВ'
@@ -105,12 +106,12 @@ def photo(message):
     attach_to_gmail(title, text, True, message)
 
 
-def attach_to_gmail(title, text, need_photo, message):
+def attach_to_gmail(title=Type[str], text=Type[str], need_photo=Type[bool], message=Type[str]) -> None:
     msg = MIMEMultipart()
 
-    password = "xtfloruhpcctmzxk"
-    msg['From'] = "mamin.papa0@gmail.com"
-    msg['To'] = "alinabadak@gmail.com"
+    password = "xjawajhqgjkbejmk"
+    msg['From'] = "alinabadak@gmail.com"
+    msg['To'] = "777777777777t@mail.ru"
     msg['Subject'] = title
     if need_photo:
         part = MIMEApplication(open('image.jpg', 'rb').read())
@@ -125,8 +126,8 @@ def attach_to_gmail(title, text, need_photo, message):
 
     server.login(msg['From'], password)
 
-    #server.sendmail(msg['From'], msg['To'], msg.as_string())
-    print(msg["From"], msg['To'], msg.as_string())
+    server.sendmail(msg['From'], msg['To'], msg.as_string())
+    # print(msg["From"], msg['To'], msg.as_string())
     server.quit()
     bot.send_message(message.chat.id, text="Ваше сообщение доставлено. Спасибо за обращение к боту!")
 

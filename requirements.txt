@@ -1,3 +1,0 @@
-telebot==0.0.4
-xsmtplib==1.0.1.dev0
-pyTelegramBotApi==4.8.0

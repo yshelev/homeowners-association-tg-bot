@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -11,6 +10,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from config import settings
+from config import WEBHOOK_URL
 from presentation.final_state_machines import ReportForm, OrderForm, UserFSM
 from presentation.keyboards.constants import (
     CONTACTS,
@@ -34,7 +34,7 @@ dp = Dispatcher()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await bot.set_webhook(
-        url=settings.webhook_url,
+        url=WEBHOOK_URL,
         drop_pending_updates=True
     )
     logging.info("Бот запущен!")
@@ -112,7 +112,7 @@ async def handle_back_button(message: Message, state: FSMContext):
     kb = ReplyKeyboardFabric.get_problem_type_keyboard()
     await message.answer(f"\nВыберите действия ниже.", reply_markup=kb)
 
-@app.post(settings.webhook_url)
+@app.post(WEBHOOK_URL)
 async def bot_webhook(request: Request):
     update = types.Update(**await request.json())
     await dp.feed_update(bot, update)
@@ -120,4 +120,4 @@ async def bot_webhook(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", )
+    uvicorn.run(app, host="0.0.0.0")

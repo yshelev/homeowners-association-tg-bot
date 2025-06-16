@@ -9,4 +9,4 @@ class Settings(BaseSettings):
 		env_file = ".env"
 
 settings = Settings()
-settings.webhook_url = settings.webhook_host + settings.webhook_path
+WEBHOOK_URL = settings.webhook_host + settings.webhook_path

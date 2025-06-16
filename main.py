@@ -1,135 +1,99 @@
-from email.mime.text import MIMEText
-from typing import Type
+import asyncio
+import logging
 
-import telebot
-from telebot import types
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
+from aiogram import Bot, Dispatcher, F
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
 
-TOKEN = "5941022226:AAHWQRMfKB21R__JoxFxhIe910WXCR9_RH4"
-bot = telebot.TeleBot(TOKEN)
-evidence_or_problem_or_reference = -1  # показания - 0, проблема - 1, справка - 2
+from config import settings
+from presentation.final_state_machines import ReportForm, OrderForm, UserFSM
+from presentation.keyboards.constants import (
+	CONTACTS,
+	ORDER_CERTIFICATES,
+	CREATE_REPORT,
+	MASTER_CALL,
+	METER_READINGS,
+	ALL_CONTACTS, BACK
+)
+from presentation.keyboards.reply import ReplyKeyboardFabric
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
-@bot.message_handler(commands=['start'])
-def start(message=Type[str]) -> None:
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn1 = types.KeyboardButton("Вызов мастера")
-    btn2 = types.KeyboardButton("Сообщить о проблеме")
-    btn3 = types.KeyboardButton("Показания счетчиков")
-    btn4 = types.KeyboardButton("Заказать справки")
-    btn5 = types.KeyboardButton("Контакты ТСЖ")
-    markup.add(btn1, btn2, btn3, btn4, btn5)
-    bot.send_message(message.chat.id,
-                     text="Здравствуйте, вас приветствует диспетчер ТСЖ. \n Выберите действия ниже.".format(
-                         message.from_user), reply_markup=markup)
+bot = Bot(token=settings.bot_token)
+dp = Dispatcher()
 
+@dp.message(Command("start"))
+async def start(message: Message, state: FSMContext):
+	await state.set_state(UserFSM.start)
+	kb = ReplyKeyboardFabric.get_problem_type_keyboard()
+	await message.answer(f"Здравствуйте, {message.from_user.first_name}, вас приветствует диспетчер ТСЖ."
+	                     f"\nВыберите действия ниже.", reply_markup=kb)
 
-@bot.message_handler(content_types=['text'])
-def func(message=Type[str]) -> None:
-    global evidence_or_problem_or_reference
-    if message.text == "Сообщить о проблеме":
-        bot.send_message(message.chat.id, text=f"Опишите проблему.")
-        evidence_or_problem_or_reference = 1
-    elif message.text == "Показания счетчиков":
-        bot.send_message(message.chat.id, text='Отправьте фотографию с показаниями счетчиков')
-        evidence_or_problem_or_reference = 0
-    elif message.text == "Заказать справки":
-        evidence_or_problem_or_reference = 2
-        bot.send_message(message.chat.id, text="Опишите, какая заявка вам нужна.")
-    elif message.text == "Контакты ТСЖ":
-        bot.send_message(message.chat.id, text='contact1, contact2, contact3, contact4, etc.')
-    elif message.text == "Вызов мастера":
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton("Электрик")
-        btn2 = types.KeyboardButton("Слесарь")
-        btn3 = types.KeyboardButton("Диспетчер ТСЖ")
-        btn4 = types.KeyboardButton("Лифтер")
-        btn5 = types.KeyboardButton("Домофон")
-        back = types.KeyboardButton("Назад")
-        markup.add(btn1, btn2, btn3, btn4, btn5, back)
-        bot.send_message(message.chat.id, text="Выберите мастера", reply_markup=markup)
-    elif message.text == "Назад":
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton("Вызов мастера")
-        btn2 = types.KeyboardButton("Сообщить о проблеме")
-        btn3 = types.KeyboardButton("Показания счетчиков")
-        btn4 = types.KeyboardButton("Заказать справки")
-        btn5 = types.KeyboardButton("Контакты ТСЖ")
-        markup.add(btn1, btn2, btn3, btn4, btn5)
-        bot.send_message(message.chat.id, text="Выберите действие.", reply_markup=markup)
-    elif message.text == 'Электрик':
-        bot.send_message(message.chat.id, text='contact_electric')
-    elif message.text == 'Слесарь':
-        bot.send_message(message.chat.id, text='contact_slesar')
-    elif message.text == 'Диспетчер ТСЖ':
-        bot.send_message(message.chat.id, text='contact_dispetcher')
-    elif message.text == 'Лифтер':
-        bot.send_message(message.chat.id, text='contact_lifter')
-    elif message.text == 'Домофон':
-        bot.send_message(message.chat.id, text='contact_domofon')
-    else:
-        if evidence_or_problem_or_reference != -1:
-            if evidence_or_problem_or_reference == 1:
-                title = "ПРОБЛЕМА"
-                text = message.text
-                attach_to_gmail(title, text, False, message)
-                evidence_or_problem_or_reference = -1
-            else:
-                title = 'СПРАВКА'
-                text = message.text
-                attach_to_gmail(title, text, False, message)
-                evidence_or_problem_or_reference = -1
-        else:
-            bot.send_message(message.chat.id, text="Попробуйте снова.")
+@dp.message(F.text == CONTACTS, UserFSM.start)
+async def contacts(message: Message, state: FSMContext):
+	await state.set_state(UserFSM.informed)
+	bkb = ReplyKeyboardFabric.back_keyboard()
+	await message.answer(f"contacts, user {await state.get_state()}", reply_markup=bkb)
 
+@dp.message(F.text == CREATE_REPORT, UserFSM.start)
+async def create_report(message: Message, state: FSMContext):
+	await state.set_state(ReportForm.text)
+	await state.set_state(UserFSM.prepare)
+	bkb = ReplyKeyboardFabric.back_keyboard()
+	await message.answer("Опишите проблему.", reply_markup=bkb)
 
-@bot.message_handler(content_types=['photo'])
-def photo(message=Type[str]) -> None:
-    text = message.caption
-    if evidence_or_problem_or_reference == 0:
-        title = 'ПОКАЗАНИЯ СЧЕТЧИКОВ'
-    elif evidence_or_problem_or_reference == 1:
-        title = "ПРОБЛЕМА"
-    elif evidence_or_problem_or_reference == 2:
-        title = "СПРАВКА"
-    else:
-        title = "idkwhatisit"
+@dp.message(F.text == ORDER_CERTIFICATES)
+async def order_certificates(message: Message, state: FSMContext):
+	await state.set_state(OrderForm.text)
+	await state.set_state(UserFSM.prepare)
+	bkb = ReplyKeyboardFabric.back_keyboard()
+	await message.answer("Опишите, какая заявка вам нужна.", reply_markup=bkb)
 
-    fileID = message.photo[-1].file_id
-    file_info = bot.get_file(fileID)
-    downloaded_file = bot.download_file(file_info.
-                                        file_path)
-    with open("image.jpg", 'wb') as new_file:
-        new_file.write(downloaded_file)
-    attach_to_gmail(title, text, True, message)
+@dp.message(F.text == MASTER_CALL)
+async def master_call(message: Message, state: FSMContext):
+	await state.set_state(UserFSM.prepare)
+	kb = ReplyKeyboardFabric.contacts_keyboard()
+	await message.answer("Выберите мастера", reply_markup=kb)
+
+@dp.message(F.text.in_(ALL_CONTACTS))
+async def get_contact(message: Message, state: FSMContext):
+	await message.answer(ALL_CONTACTS.get(message.text))
+
+@dp.message(F.text == METER_READINGS)
+async def meter_readings(message: Message, state: FSMContext):
+	await state.set_state(UserFSM.prepare)
+	bkb = ReplyKeyboardFabric.back_keyboard()
+	await message.answer("Отправьте фотографии с показаниями ваших счетчиков.", reply_markup=bkb)
+
+@dp.message(ReportForm.text, UserFSM.prepare)
+async def handle_report_text(message: Message, state: FSMContext):
+	await state.update_data(text=message.text)
+	data = await state.get_data()
+	await state.clear()
+	await message.answer("Заявка принята в работу, спасибо💘")
+
+@dp.message(OrderForm.text, UserFSM.prepare)
+async def handle_report_text(message: Message, state: FSMContext):
+	await state.update_data(text=message.text)
+	data = await state.get_data()
+	await state.clear()
+	await state.set_state(UserFSM.informed)
+	await message.answer("Заявка принята в работу, спасибо💘")
+
+@dp.message(F.text == BACK)
+async def handle_back_button(message: Message, state: FSMContext):
+	await state.set_state(UserFSM.start)
+	kb = ReplyKeyboardFabric.get_problem_type_keyboard()
+	await message.answer(f"\nВыберите действия ниже.", reply_markup=kb)
 
 
-def attach_to_gmail(title=Type[str], text=Type[str], need_photo=Type[bool], message=Type[str]) -> None:
-    msg = MIMEMultipart()
+async def main():
+	await dp.start_polling(bot)
 
-    password = "xjawajhqgjkbejmk"
-    msg['From'] = "alinabadak@gmail.com"
-    msg['To'] = "alinabadak@gmail.com"
-    msg['Subject'] = title
-    if need_photo:
-        part = MIMEApplication(open('image.jpg', 'rb').read())
-        part.add_header('Content-Disposition', 'attachment', filename='image.jpg')
-        msg.attach(part)
-
-    msg.attach(MIMEText(text))
-
-    server = smtplib.SMTP('smtp.gmail.com', 587)
-
-    server.starttls()
-
-    server.login(msg['From'], password)
-
-    server.sendmail(msg['From'], msg['To'], msg.as_string())
-    # print(msg["From"], msg['To'], msg.as_string())
-    server.quit()
-    bot.send_message(message.chat.id, text="Ваше сообщение доставлено. Спасибо за обращение к боту!")
-
-
-bot.polling(none_stop=True)
+if __name__ == "__main__":
+	asyncio.run(main())

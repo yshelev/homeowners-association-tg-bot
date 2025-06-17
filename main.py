@@ -34,7 +34,7 @@ dp = Dispatcher()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await bot.set_webhook(
-        url=WEBHOOK_URL,
+        url=settings.webhook_path,
         drop_pending_updates=True
     )
     logging.info("Бот запущен!")
@@ -112,7 +112,7 @@ async def handle_back_button(message: Message, state: FSMContext):
     kb = ReplyKeyboardFabric.get_problem_type_keyboard()
     await message.answer(f"\nВыберите действия ниже.", reply_markup=kb)
 
-@app.post("/webhook")
+@app.post(settings.webhook_path)
 async def bot_webhook(request: Request):
     update = types.Update(**await request.json())
     await dp.feed_update(bot, update)

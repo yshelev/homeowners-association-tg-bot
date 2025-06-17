@@ -112,7 +112,7 @@ async def handle_back_button(message: Message, state: FSMContext):
     kb = ReplyKeyboardFabric.get_problem_type_keyboard()
     await message.answer(f"\nВыберите действия ниже.", reply_markup=kb)
 
-@app.post(settings.webhook_path)
+@app.post("/webhook")
 async def bot_webhook(request: Request):
     update = types.Update(**await request.json())
     await dp.feed_update(bot, update)

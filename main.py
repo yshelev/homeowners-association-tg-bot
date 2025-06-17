@@ -34,7 +34,7 @@ dp = Dispatcher()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await bot.set_webhook(
-        url=settings.webhook_path,
+        url=WEBHOOK_URL,
         drop_pending_updates=True
     )
     logging.info("Бот запущен!")
